@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Supervisión ROANSA</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --red: #C0392B; --red-dark: #922B21; --red-light: #FADBD8;
+    --gold: #F39C12; --gold-light: #FEF9E7;
+    --green: #27AE60; --green-light: #EAFAF1;
+    --gray: #5D6D7E; --gray-light: #F2F3F4;
+    --text: #2C3E50; --text-muted: #7F8C8D;
+    --border: #E5E8E8; --white: #FFFFFF; --bg: #F8F9FA;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); }
+  .header { background: var(--red); color: white; padding: 16px 20px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 100; }
+  .header-logo { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
+  .header-sub { font-size: 12px; opacity: 0.85; }
+  .header-right { margin-left: auto; font-size: 12px; opacity: 0.85; text-align: right; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* HOME */
+  .home-hero { background: var(--red); color: white; padding: 32px 20px 48px; text-align: center; }
+  .home-hero h1 { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+  .home-hero p { font-size: 14px; opacity: 0.85; }
+  .home-card { background: white; border-radius: 16px; margin: -24px 16px 0; padding: 24px 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+  .home-card h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text); }
+  .field-group { margin-bottom: 20px; }
+  .field-label { font-size: 13px; font-weight: 600; color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; display: block; }
+  select, input[type="text"], textarea {
+    width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 10px;
+    font-size: 15px; color: var(--text); background: var(--white); appearance: none; -webkit-appearance: none;
+  }
+  select:focus, input:focus, textarea:focus { outline: none; border-color: var(--red); }
+  .btn-primary { width: 100%; padding: 14px; background: var(--red); color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; }
+  .btn-primary:active { background: var(--red-dark); }
+  .btn-secondary { width: 100%; padding: 12px; background: white; color: var(--red); border: 2px solid var(--red); border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 10px; }
+
+  /* FORM */
+  .form-header { background: white; padding: 16px 20px; border-bottom: 1px solid var(--border); position: sticky; top: 56px; z-index: 90; }
+  .form-progress { height: 4px; background: var(--border); border-radius: 4px; margin-top: 10px; }
+  .form-progress-fill { height: 100%; background: var(--red); border-radius: 4px; transition: width 0.4s; }
+  .form-step-label { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+  .section { padding: 20px; border-bottom: 1px solid var(--border); }
+  .section-title { font-size: 15px; font-weight: 700; color: var(--red); margin-bottom: 4px; }
+  .section-desc { font-size: 12px; color: var(--text-muted); margin-bottom: 14px; }
+  .check-item { background: white; border-radius: 10px; border: 1.5px solid var(--border); padding: 12px 14px; margin-bottom: 10px; }
+  .check-item-text { font-size: 14px; font-weight: 500; color: var(--text); }
+  .check-item-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .status-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
+  .status-btn { padding: 10px 4px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; text-align: center; background: white; }
+  .status-btn.na-btn { color: var(--gray); }
+  .status-btn.na-btn.selected { background: #F2F3F4; border-color: var(--gray); }
+  .status-btn.ok { color: var(--green); }
+  .status-btn.ok.selected { background: var(--green-light); border-color: var(--green); }
+  .status-btn.warn { color: var(--gold); }
+  .status-btn.warn.selected { background: var(--gold-light); border-color: var(--gold); }
+  .status-btn.fail { color: var(--red); }
+  .status-btn.fail.selected { background: var(--red-light); border-color: var(--red); }
+  .obs-input { margin-top: 8px; }
+  .obs-input textarea { font-size: 13px; padding: 10px 12px; min-height: 60px; resize: none; border-radius: 8px; }
+  .nav-bar { padding: 16px 20px; background: white; border-top: 1px solid var(--border); display: flex; gap: 10px; position: sticky; bottom: 0; }
+
+  /* DASHBOARD — altura fija, scroll interno */
+  #screen-dash { height: calc(100vh - 56px); overflow-y: auto; }
+  .dash-header { background: var(--text); color: white; padding: 20px; }
+  .dash-header h2 { font-size: 20px; font-weight: 700; }
+  .dash-header p { font-size: 13px; opacity: 0.7; margin-top: 4px; }
+  .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 16px; }
+  .metric-card { background: white; border-radius: 12px; padding: 14px; border: 1px solid var(--border); text-align: center; }
+  .metric-value { font-size: 28px; font-weight: 700; }
+  .metric-label { font-size: 11px; color: var(--text-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .metric-card.green .metric-value { color: var(--green); }
+  .metric-card.red .metric-value { color: var(--red); }
+  .metric-card.gold .metric-value { color: var(--gold); }
+  .dash-section { padding: 0 16px 16px; }
+  .dash-section-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .result-item { background: white; border-radius: 10px; border: 1px solid var(--border); padding: 12px 14px; margin-bottom: 8px; }
+  .result-item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .result-item-name { font-size: 14px; font-weight: 600; }
+  .badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+  .badge.ok { background: var(--green-light); color: var(--green); }
+  .badge.warn { background: var(--gold-light); color: var(--gold); }
+  .badge.fail { background: var(--red-light); color: var(--red); }
+  .result-obs { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+  .score-bar { height: 8px; background: var(--border); border-radius: 4px; margin: 6px 0; }
+  .score-bar-fill { height: 100%; border-radius: 4px; }
+  .radar-container { background: white; border-radius: 12px; border: 1px solid var(--border); padding: 16px; margin: 0 16px 16px; }
+  .sheets-panel { background: var(--gray-light); padding: 16px; margin: 0 16px 16px; border-radius: 12px; border: 1px solid var(--border); }
+  .sheets-panel h3 { font-size: 14px; font-weight: 600; margin-bottom: 10px; }
+  .sheets-status { font-size: 13px; padding: 10px 12px; border-radius: 8px; }
+  .sheets-status.success { background: var(--green-light); color: var(--green); }
+  .sheets-status.error { background: var(--red-light); color: var(--red); }
+  .sheets-status.pending { background: var(--gold-light); color: var(--gold); }
+  .url-input-group { display: flex; gap: 8px; margin-top: 8px; }
+  .url-input-group input { flex: 1; font-size: 12px; }
+  .url-input-group button { padding: 10px 14px; background: var(--text); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  @media (min-width: 600px) { body { max-width: 480px; margin: 0 auto; } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-logo">ROANSA</div>
+    <div class="header-sub">Seguridad Privada</div>
+  </div>
+  <div class="header-right" id="headerDate"></div>
+</div>
+
+<!-- HOME -->
+<div id="screen-home" class="screen active">
+  <div class="home-hero">
+    <h1>Supervisión del Día</h1>
+    <p>Complete el formulario para registrar la supervisión</p>
+  </div>
+  <div class="home-card">
+    <h2>Iniciar supervisión</h2>
+    <div class="field-group">
+      <label class="field-label">Supervisor</label>
+      <select id="sel-supervisor">
+        <option value="">— Seleccionar —</option>
+        <option>Oscar Medina</option>
+        <option>Enrique Huitron</option>
+      </select>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Servicio / Sede</label>
+      <select id="sel-servicio">
+        <option value="">— Seleccionar sede —</option>
+        <optgroup label="PolymerShapes">
+          <option>PolymerShapes – Bellavista</option>
+          <option>PolymerShapes – Naucalpan</option>
+        </optgroup>
+        <optgroup label="Grupo Guías">
+          <option>Grupo Guías</option>
+          <option>Predio Satélite</option>
+        </optgroup>
+        <optgroup label="Vorwerk">
+          <option>Vorwerk – Ermita</option>
+          <option>Vorwerk – Florida</option>
+          <option>Vorwerk – Roma</option>
+          <option>Vorwerk – Periférico</option>
+        </optgroup>
+        <optgroup label="Dimsa">
+          <option>Dimsa – Lebrija</option>
+          <option>Dimsa – España</option>
+        </optgroup>
+        <optgroup label="Otros">
+          <option>Ximena's Bar</option>
+        </optgroup>
+        <optgroup label="Austromex">
+          <option>Austromex – Gavilán</option>
+          <option>Austromex – San Bartolo</option>
+          <option>Austromex – Rojo Gómez</option>
+          <option>Austromex – V. Guerrero</option>
+        </optgroup>
+        <optgroup label="Muncher">
+          <option>Muncher – Altavista</option>
+          <option>Muncher – Liverpool</option>
+          <option>Muncher – Polanco</option>
+          <option>Muncher – Condesa</option>
+        </optgroup>
+        <optgroup label="Médico / Salud">
+          <option>Centro Médico Bios</option>
+        </optgroup>
+        <optgroup label="Industrial">
+          <option>Panasonic Resina</option>
+          <option>Panasonic Corporativo</option>
+        </optgroup>
+        <optgroup label="Aldisan">
+          <option>Aldisan Logistic</option>
+        </optgroup>
+      </select>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Elemento (Guardia)</label>
+      <input type="text" id="inp-guardia" placeholder="Nombre completo del guardia">
+    </div>
+    <button class="btn-primary" onclick="startForm()">Iniciar supervisión →</button>
+  </div>
+  <div style="padding: 20px 16px;">
+    <button class="btn-secondary" onclick="showLastReport()">📊 Ver último reporte</button>
+  </div>
+</div>
+
+<!-- FORM -->
+<div id="screen-form" class="screen">
+  <div class="form-header">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <span id="form-step-num" style="font-size:13px; font-weight:600; color:var(--red);">Sección 1 de 7</span>
+      <span id="form-pct" style="font-size:13px; color:var(--text-muted);">0%</span>
+    </div>
+    <div class="form-progress"><div class="form-progress-fill" id="progressBar" style="width:0%"></div></div>
+    <div class="form-step-label" id="form-step-label"></div>
+  </div>
+  <div id="form-content"></div>
+  <div class="nav-bar">
+    <button class="btn-secondary" style="margin:0; width:auto; padding:12px 20px;" onclick="prevStep()">← Atrás</button>
+    <button class="btn-primary" style="margin:0;" onclick="nextStep()" id="btn-next">Siguiente →</button>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="screen-dash" class="screen">
+  <div class="dash-header">
+    <h2>Reporte de Supervisión</h2>
+    <p id="dash-meta"></p>
+  </div>
+  <div class="metrics-grid" id="dash-metrics"></div>
+  <div class="radar-container">
+    <div style="font-size:13px; font-weight:600; margin-bottom:12px; text-align:center;">Desempeño por indicador</div>
+    <div style="position:relative; height:260px;">
+      <canvas id="radarCanvas" role="img" aria-label="Gráfica radar de desempeño por indicador"></canvas>
+    </div>
+  </div>
+  <div class="dash-section">
+    <div class="dash-section-title">Detalle por sección</div>
+    <div id="dash-details"></div>
+  </div>
+  <div style="padding: 0 16px 32px; display:flex; flex-direction:column; gap:10px;">
+    <button class="btn-primary" style="margin:0;" onclick="goHome()">← Nueva supervisión</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const SECTIONS = [
+  {
+    id: 'uniforme', title: 'Uniforme y presentación', icon: '👔',
+    desc: 'Verificar que el elemento cuente con todos los elementos del uniforme reglamentario',
+    items: [
+      { id: 'u1', text: 'Camisa reglamentaria', sub: 'Limpia, planchada, con nombre y logo visible' },
+      { id: 'u2', text: 'Pantalón reglamentario', sub: 'Limpio y en buen estado' },
+      { id: 'u3', text: 'Botas o zapatos de trabajo', sub: 'Limpios, con casquillo o reglamentarios' },
+      { id: 'u4', text: 'Cinturón y hebilla', sub: 'Reglamentario, en buen estado' },
+      { id: 'u5', text: 'Gorra o casco (según servicio)', sub: 'Limpio y con insignia' },
+      { id: 'u6', text: 'Chaleco / chaqueta (si aplica)', sub: 'Completo y limpio' },
+      { id: 'u7', text: 'Presentación personal', sub: 'Afeitado, cabello ordenado, uñas limpias' },
+    ]
+  },
+  {
+    id: 'equipo', title: 'Equipo y herramientas', icon: '🔦',
+    desc: 'Verificar que el guardia cuente con los equipos necesarios para el servicio',
+    items: [
+      { id: 'e1', text: 'Radio de comunicación', sub: 'Cargado, funcionando y configurado en canal correcto' },
+      { id: 'e2', text: 'Linterna', sub: 'Funcionando con batería cargada' },
+      { id: 'e6', text: 'Credencial de identificación', sub: 'Visible y actualizada' },
+      { id: 'e7', text: 'Teléfono o medio de comunicación', sub: 'Solo para uso de servicio, no personal' },
+      { id: 'e8', text: 'Botón de pánico', sub: 'Presente, cargado y en funcionamiento' },
+    ]
+  },
+  {
+    id: 'puesto', title: 'Área de trabajo / Caseta', icon: '🏠',
+    desc: 'Inspección del área física donde el elemento desempeña su servicio',
+    items: [
+      { id: 'p1', text: 'Caseta limpia y ordenada', sub: 'Sin basura, papeles tirados ni desorden' },
+      { id: 'p2', text: 'Sin cables conectados sin uso', sub: 'Cargadores personales desconectados, sin extensiones peligrosas' },
+      { id: 'p3', text: 'Iluminación del área funcionando', sub: 'Lámparas y focos operativos' },
+      { id: 'p4', text: 'Sin alimentos o bebidas a la vista', sub: 'No comer en puesto activo o caseta sin autorización' },
+      { id: 'p5', text: 'Sin uso de celular personal', sub: 'El elemento no usa celular durante el servicio' },
+      { id: 'p6', text: 'Extintor visible y con fecha vigente', sub: 'Verificar etiqueta de recarga' },
+      { id: 'p7', text: 'Señalética de emergencia en su lugar', sub: 'Rutas de evacuación, salidas de emergencia visibles' },
+    ]
+  },
+  {
+    id: 'bitacora', title: 'Bitácora y registros', icon: '📋',
+    desc: 'Verificar el correcto llenado y control de registros del servicio',
+    items: [
+      { id: 'b1', text: 'Bitácora actualizada al momento', sub: 'Con fecha, hora y novedades registradas' },
+      { id: 'b2', text: 'Letra legible y sin enmendaduras', sub: 'Registros claros y ordenados' },
+      { id: 'b3', text: 'Registro de ingreso/egreso de vehículos', sub: 'Placas, modelo, conductor y horario anotados' },
+      { id: 'b4', text: 'Registro de visitas y proveedores', sub: 'Nombre, empresa, hora de entrada y salida' },
+      { id: 'b5', text: 'Registro de personal de limpieza', sub: 'Entrada y salida anotadas' },
+      { id: 'b6', text: 'Documentos anteriores archivados', sub: 'Bitácoras de días previos guardadas correctamente' },
+    ]
+  },
+  {
+    id: 'accesos', title: 'Control de accesos', icon: '🚪',
+    desc: 'Verificar que el elemento controle correctamente los accesos al inmueble',
+    items: [
+      { id: 'a1', text: 'Pide identificación a visitantes', sub: 'No permite acceso sin verificar identidad' },
+      { id: 'a2', text: 'Solicita autorización antes de dar acceso', sub: 'Avisa al responsable interno antes de dejar pasar' },
+      { id: 'a3', text: 'Portón/puerta en buen estado', sub: 'Sin daños, cerrojo o chapa funcionando' },
+      { id: 'a4', text: 'No permite acceso no autorizado', sub: 'Aplica protocolo de negativa de acceso' },
+      { id: 'a5', text: 'Cámaras de seguridad visibles y operando', sub: 'Sin daños aparentes, lentes limpios' },
+      { id: 'a6', text: 'Conoce los accesos alternativos del inmueble', sub: 'Sabe qué puertas existen y cuáles deben permanecer cerradas' },
+    ]
+  },
+  {
+    id: 'recorridos', title: 'Recorridos y verificaciones', icon: '🚶',
+    desc: 'Evaluar la calidad y frecuencia de los recorridos de vigilancia',
+    items: [
+      { id: 'r1', text: 'Realiza recorridos periódicos', sub: 'Mínimo cada hora o según protocolo del servicio' },
+      { id: 'r2', text: 'Verifica áreas comunes, bodegas y pasillos', sub: 'No se limita a la caseta' },
+      { id: 'r3', text: 'Reporta novedades en tiempo y forma', sub: 'Comunica inmediatamente cualquier anomalía' },
+      { id: 'r4', text: 'Conoce los puntos de vulnerabilidad', sub: 'Identifica áreas de riesgo del inmueble' },
+      { id: 'r5', text: 'Verifica eléctrico y cuarto de máquinas', sub: 'Reporta cables sueltos, olores o situaciones anómalas' },
+      { id: 'r6', text: 'No duerme o descansa en puesto activo', sub: 'Permanece alerta durante su turno' },
+    ]
+  },
+  {
+    id: 'protocolo', title: 'Protocolos y conocimiento', icon: '🧠',
+    desc: 'Verificar que el elemento conozca y aplique los protocolos del servicio',
+    items: [
+      { id: 'k1', text: 'Conoce el protocolo de incendio', sub: 'Sabe cómo actuar y a quién llamar' },
+      { id: 'k2', text: 'Conoce el protocolo de sismo', sub: 'Conoce puntos de reunión y zonas de seguridad' },
+      { id: 'k3', text: 'Conoce el protocolo de robo/asalto', sub: 'Sabe cómo proceder sin poner en riesgo su vida' },
+      { id: 'k4', text: 'Conoce los números de emergencia', sub: 'Policía, bomberos, ambulancia y contacto interno' },
+      { id: 'k5', text: 'Actitud correcta con personal y visitantes', sub: 'Trato cordial, firme y profesional' },
+      { id: 'k6', text: 'Estado físico y mental adecuado', sub: 'Sin señales de fatiga extrema, aliento alcohólico o comportamiento inusual' },
+    ]
+  }
+];
+
+let state = { supervisor: '', servicio: '', guardia: '', step: 0, answers: {}, notes: {} };
+let radarChart = null;
+let savedReports = JSON.parse(localStorage.getItem('roansa_reports') || '[]');
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbz_Ad7OUbpCOlNkRQ4VPfzAMM7XIzSheq7yJLKnzFwvv24nHVHo0b3UByEbJ_APOEMP/exec';
+
+document.getElementById('headerDate').textContent = new Date().toLocaleDateString('es-MX', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  window.scrollTo(0, 0);
+  if (id === 'dash') {
+    document.getElementById('screen-dash').scrollTop = 0;
+  }
+}
+function goHome() { showScreen('home'); }
+
+function startForm() {
+  const sup = document.getElementById('sel-supervisor').value;
+  const serv = document.getElementById('sel-servicio').value;
+  const gua = document.getElementById('inp-guardia').value.trim();
+  if (!sup || !serv || !gua) { alert('Por favor completa todos los campos antes de continuar.'); return; }
+  state.supervisor = sup;
+  state.servicio = serv;
+  state.guardia = gua;
+  state.step = 0;
+  state.answers = {};
+  state.notes = {};
+  renderStep();
+  showScreen('form');
+}
+
+function renderStep() {
+  const sec = SECTIONS[state.step];
+  const total = SECTIONS.length;
+  const pct = Math.round((state.step / total) * 100);
+  document.getElementById('form-step-num').textContent = `Sección ${state.step + 1} de ${total}`;
+  document.getElementById('form-pct').textContent = pct + '%';
+  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('form-step-label').textContent = sec.icon + ' ' + sec.title;
+  document.getElementById('btn-next').textContent = state.step === total - 1 ? 'Ver reporte ✓' : 'Siguiente →';
+
+  let html = `<div class="section">
+    <div class="section-title">${sec.icon} ${sec.title}</div>
+    <div class="section-desc">${sec.desc}</div>`;
+
+  sec.items.forEach(item => {
+    const ans = state.answers[item.id] || '';
+    const note = state.notes[item.id] || '';
+    html += `<div class="check-item">
+      <div class="check-item-text">${item.text}</div>
+      <div class="check-item-sub">${item.sub}</div>
+      <div class="status-buttons">
+        <button class="status-btn ok ${ans==='ok'?'selected':''}" onclick="setAnswer('${item.id}','ok',this)">✓ OK</button>
+        <button class="status-btn warn ${ans==='warn'?'selected':''}" onclick="setAnswer('${item.id}','warn',this)">⚠ Prevención</button>
+        <button class="status-btn fail ${ans==='fail'?'selected':''}" onclick="setAnswer('${item.id}','fail',this)">✗ Atención</button>
+        <button class="status-btn na-btn ${ans==='na'?'selected':''}" onclick="setAnswer('${item.id}','na',this)">— N/A</button>
+      </div>
+      <div class="obs-input" id="obs-${item.id}" style="${ans&&ans!=='ok'&&ans!=='na'?'':'display:none'}">
+        <textarea placeholder="Observaciones..." onchange="setNote('${item.id}',this.value)">${note}</textarea>
+      </div>
+    </div>`;
+  });
+
+  html += `<div class="field-group" style="margin-top:16px;">
+    <label class="field-label">Observación general de la sección</label>
+    <textarea style="font-size:14px; min-height:70px; border-radius:8px; width:100%; padding:10px 12px; border:1.5px solid var(--border);" id="sec-note-${sec.id}" placeholder="Novedades o comentarios adicionales...">${state.notes['sec_'+sec.id]||''}</textarea>
+  </div></div>`;
+
+  document.getElementById('form-content').innerHTML = html;
+  window.scrollTo(0, 0);
+}
+
+function setAnswer(id, val, btn) {
+  state.answers[id] = val;
+  btn.closest('.status-buttons').querySelectorAll('.status-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  const showObs = (val !== 'ok' && val !== 'na');
+  document.getElementById('obs-' + id).style.display = showObs ? 'block' : 'none';
+}
+
+function setNote(id, val) { state.notes[id] = val; }
+
+function saveSecNote() {
+  const el = document.getElementById('sec-note-' + SECTIONS[state.step].id);
+  if (el) state.notes['sec_' + SECTIONS[state.step].id] = el.value;
+}
+
+function prevStep() {
+  saveSecNote();
+  if (state.step > 0) { state.step--; renderStep(); } else { goHome(); }
+}
+
+function nextStep() {
+  saveSecNote();
+  if (state.step < SECTIONS.length - 1) { state.step++; renderStep(); }
+  else { buildDashboard(); showScreen('dash'); }
+}
+
+function buildDashboard() {
+  const now = new Date();
+  document.getElementById('dash-meta').textContent =
+    `${state.supervisor} · ${state.servicio} · ${now.toLocaleString('es-MX')}`;
+
+  let totalItems = 0, okCount = 0, warnCount = 0, failCount = 0;
+  const sectionScores = [];
+
+  SECTIONS.forEach(sec => {
+    let secOk = 0, secWarn = 0, secFail = 0, secNa = 0;
+    sec.items.forEach(item => {
+      const a = state.answers[item.id];
+      if (a === 'ok') { okCount++; secOk++; totalItems++; }
+      else if (a === 'warn') { warnCount++; secWarn++; totalItems++; }
+      else if (a === 'fail') { failCount++; secFail++; totalItems++; }
+      else if (a === 'na') { secNa++; }
+      // sin respuesta tampoco cuenta
+    });
+    const scored = secOk + secWarn + secFail;
+    const score = scored > 0 ? Math.round(((secOk * 100 + secWarn * 50) / (scored * 100)) * 100) : 0;
+    sectionScores.push({ sec, score, secOk, secWarn, secFail, secNa });
+  });
+
+  const globalScore = totalItems > 0 ? Math.round(((okCount * 100 + warnCount * 50) / (totalItems * 100)) * 100) : 0;
+  const scoreColor = globalScore >= 80 ? 'green' : globalScore >= 60 ? 'gold' : 'red';
+
+  document.getElementById('dash-metrics').innerHTML = `
+    <div class="metric-card ${scoreColor}">
+      <div class="metric-value">${globalScore}%</div>
+      <div class="metric-label">Calificación global</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" style="color:var(--text)">${totalItems}</div>
+      <div class="metric-label">Indicadores</div>
+    </div>
+    <div class="metric-card green">
+      <div class="metric-value">${okCount}</div>
+      <div class="metric-label">Satisfactorios</div>
+    </div>
+    <div class="metric-card red">
+      <div class="metric-value">${failCount}</div>
+      <div class="metric-label">Atención requerida</div>
+    </div>`;
+
+  let detailHtml = '';
+  sectionScores.forEach(({ sec, score, secOk, secWarn, secFail, secNa }) => {
+    const barColor = score >= 80 ? '#27AE60' : score >= 60 ? '#F39C12' : '#C0392B';
+    const badge = score >= 80 ? 'ok' : score >= 60 ? 'warn' : 'fail';
+    const badgeTxt = score >= 80 ? 'Satisfactorio' : score >= 60 ? 'Prevención' : 'Atención';
+    const secNote = state.notes['sec_' + sec.id] || '';
+    detailHtml += `<div class="result-item">
+      <div class="result-item-header">
+        <span class="result-item-name">${sec.icon} ${sec.title}</span>
+        <span class="badge ${badge}">${badgeTxt}</span>
+      </div>
+      <div class="score-bar"><div class="score-bar-fill" style="width:${score}%; background:${barColor}"></div></div>
+      <div style="display:flex; gap:12px; font-size:12px; color:var(--text-muted); margin-top:4px;">
+        <span>✓ ${secOk} OK</span><span>⚠ ${secWarn} Prev.</span><span>✗ ${secFail} Atenc.</span>${secNa > 0 ? `<span>— ${secNa} N/A</span>` : ''}
+      </div>
+      ${secNote ? `<div class="result-obs">📝 ${secNote}</div>` : ''}
+    </div>`;
+  });
+  document.getElementById('dash-details').innerHTML = detailHtml;
+
+  // Radar — destroy old chart first, then render fresh
+  if (radarChart) { radarChart.destroy(); radarChart = null; }
+  const canvas = document.getElementById('radarCanvas');
+  radarChart = new Chart(canvas, {
+    type: 'radar',
+    data: {
+      labels: sectionScores.map(s => s.sec.title),
+      datasets: [
+        { label: 'Desempeño actual', data: sectionScores.map(s => s.score), fill: true, backgroundColor: 'rgba(192,57,43,0.15)', borderColor: '#C0392B', pointBackgroundColor: '#C0392B', pointRadius: 4 },
+        { label: 'Óptimo', data: new Array(sectionScores.length).fill(100), fill: false, borderColor: '#BDC3C7', borderDash: [5,5], pointRadius: 0 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: { r: { min: 0, max: 100, ticks: { display: false }, grid: { color: 'rgba(0,0,0,0.07)' }, pointLabels: { font: { size: 10 } } } },
+      plugins: { legend: { display: false } }
+    }
+  });
+
+  // Guardar local
+  const report = {
+    fecha: now.toISOString(), supervisor: state.supervisor, servicio: state.servicio, guardia: state.guardia,
+    globalScore, okCount, warnCount, failCount,
+    answers: { ...state.answers }, notes: { ...state.notes },
+    sectionScores: sectionScores.map(s => ({ id: s.sec.id, title: s.sec.title, score: s.score }))
+  };
+  savedReports.push(report);
+  localStorage.setItem('roansa_reports', JSON.stringify(savedReports));
+
+  // Enviar a Google Sheets en segundo plano
+  const row = {
+    fecha: now.toLocaleString('es-MX'),
+    supervisor: state.supervisor,
+    servicio: state.servicio,
+    guardia: state.guardia,
+    calificacion: globalScore,
+    ok: okCount,
+    prevencion: warnCount,
+    atencion: failCount
+  };
+  sectionScores.forEach(s => { row['sec_' + s.sec.id] = s.score; });
+  fetch(SHEETS_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(row) }).catch(() => {});
+
+  // Redirigir al inicio automáticamente después de 10 segundos
+  let secsLeft = 10;
+  const btnNuevo = document.querySelector('#screen-dash .btn-primary');
+  if (btnNuevo) {
+    const timer = setInterval(() => {
+      secsLeft--;
+      if (secsLeft > 0) {
+        btnNuevo.textContent = `← Nueva supervisión (${secsLeft}s)`;
+      } else {
+        clearInterval(timer);
+        goHome();
+      }
+    }, 1000);
+    btnNuevo.textContent = `← Nueva supervisión (${secsLeft}s)`;
+  }
+}
+
+function showLastReport() {
+  if (savedReports.length === 0) { alert('No hay reportes guardados aún.'); return; }
+  const r = savedReports[savedReports.length - 1];
+  state = { ...state, supervisor: r.supervisor, servicio: r.servicio, guardia: r.guardia, answers: r.answers, notes: r.notes };
+  buildDashboard();
+  showScreen('dash');
+}
+</script>
+</body>
+</html>
