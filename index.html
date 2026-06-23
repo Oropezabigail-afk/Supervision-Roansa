@@ -522,22 +522,8 @@ function buildDashboard() {
   sectionScores.forEach(s => { row['sec_' + s.sec.id] = s.score; });
   fetch(SHEETS_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(row) }).catch(() => {});
 
-  // Redirigir al inicio automáticamente después de 10 segundos
-  let secsLeft = 10;
-  const btnNuevo = document.querySelector('#screen-dash .btn-primary');
-  if (btnNuevo) {
-    const timer = setInterval(() => {
-      secsLeft--;
-      if (secsLeft > 0) {
-        btnNuevo.textContent = `← Nueva supervisión (${secsLeft}s)`;
-      } else {
-        clearInterval(timer);
-        goHome();
-      }
-    }, 1000);
-    btnNuevo.textContent = `← Nueva supervisión (${secsLeft}s)`;
-  }
-}
+ const btnNuevo = document.querySelector('#screen-dash .btn-primary');
+  if (btnNuevo) btnNuevo.textContent = '← Nueva supervisión';
 
 function showLastReport() {
   if (savedReports.length === 0) { alert('No hay reportes guardados aún.'); return; }
